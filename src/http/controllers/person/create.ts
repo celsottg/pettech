@@ -7,7 +7,7 @@ export async function create(request:fastify.FastifyRequest, reply:fastify.Fasti
     const registerBodySchema = z.object({
         name: z.string(),
         email: z.email(),
-        birth: z.date(),
+        birth: z.coerce.date(),
         cpf: z.string(),
     })
 
