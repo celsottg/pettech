@@ -9,15 +9,16 @@ export async function create(request:fastify.FastifyRequest, reply:fastify.Fasti
         email: z.email(),
         birth: z.coerce.date(),
         cpf: z.string(),
+        user_id: z.coerce.number(),
     })
 
-    const { cpf, name, email, birth } = registerBodySchema.parse(request.body);
+    const { cpf, name, email, birth, user_id } = registerBodySchema.parse(request.body);
 
     try {
         const personRepository = new PersonRepository();
         const createPersonUseCase = new CreatePersonUseCase(personRepository);
         
-        await createPersonUseCase.handler({ cpf, name, email, birth});
+        await createPersonUseCase.handler({ cpf, name, email, birth, user_id });
 
         return reply.status(201).send({ message: 'Person created successfully' });
     } catch (error) {

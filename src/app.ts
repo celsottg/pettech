@@ -1,6 +1,8 @@
 import fastify from "fastify";
 import { personRoutes } from "./http/controllers/person/routes.js";
+import { userRoutes } from "./http/controllers/user/routes.js";
 
 export const app = fastify();
 
 app.register(personRoutes);
+app.register(userRoutes);
