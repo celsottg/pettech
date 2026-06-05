@@ -1,0 +1,41 @@
+{
+	"info": {
+		"_postman_id": "126624ff-77c5-43ac-ac52-e86c75d9050d",
+		"name": "Pettech",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "25426219",
+		"_collection_link": "https://pettech.postman.co/workspace/PosTECH~27991e32-c6db-4bf4-a248-3a35183701a7/collection/25426219-126624ff-77c5-43ac-ac52-e86c75d9050d?action=share&source=collection_link&creator=25426219"
+	},
+	"item": [
+		{
+			"name": "localhost:3000/person",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Celso Gonçalves\",\n    \"email\": \"teste@teste.com\",\n    \"birth\": \"1900-01-01\",\n    \"cpf\": \"111.111.111-11\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "localhost:3000/person",
+					"host": [
+						"localhost"
+					],
+					"port": "3000",
+					"path": [
+						"person"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
