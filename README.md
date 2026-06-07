@@ -38,6 +38,7 @@ flowchart TB
 | `env/` | Validação de variáveis de ambiente com Zod |
 | `http/controllers/` | Rotas e handlers HTTP (entrada da API) |
 | `lib/` | Infraestrutura (conexão PostgreSQL em `lib/pg/db.ts`) |
+| `utils/` | Utilitários compartilhados (ex.: tratamento global de erros) |
 | `repositories/` | Acesso a dados (queries SQL) |
 | `use-cases/` | Regras de aplicação e orquestração |
 | `use-cases/factory/` | Factories que instanciam use cases com suas dependências |
@@ -45,8 +46,9 @@ flowchart TB
 
 ### Bootstrap
 
-- `src/app.ts` — instancia o Fastify, registra as rotas e o tratamento global de erros
+- `src/app.ts` — instancia o Fastify, registra as rotas e conecta o `globalErrorHandler`
 - `src/server.ts` — sobe o servidor na porta definida em `PORT`
+- `src/utils/global-error-handler.ts` — mapeia erros de domínio e validação para respostas HTTP
 
 ### Factories de use cases
 
@@ -60,7 +62,7 @@ Os controllers não instanciam repositórios diretamente. A composição fica ce
 
 ### Tratamento de erros
 
-O `app.setErrorHandler` em `src/app.ts` centraliza as respostas HTTP:
+A função `globalErrorHandler` em `src/utils/global-error-handler.ts` centraliza as respostas HTTP e é registrada em `app.ts` via `app.setErrorHandler`:
 
 | Erro | Status | Resposta |
 |------|--------|----------|
@@ -196,6 +198,7 @@ pettech/
 │   ├── http/controllers/
 │   ├── lib/
 │   ├── repositories/
+│   ├── utils/
 │   └── use-cases/
 │       ├── errors/
 │       └── factory/
