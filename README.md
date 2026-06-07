@@ -40,19 +40,42 @@ flowchart TB
 | `lib/` | Infraestrutura (conexão PostgreSQL em `lib/pg/db.ts`) |
 | `repositories/` | Acesso a dados (queries SQL) |
 | `use-cases/` | Regras de aplicação e orquestração |
-| `use-cases/factory/` | Factories para composição de use cases (em evolução) |
+| `use-cases/factory/` | Factories que instanciam use cases com suas dependências |
+| `use-cases/errors/` | Erros de domínio reutilizados na aplicação |
 
 ### Bootstrap
 
-- `src/app.ts` — instancia o Fastify e registra as rotas
+- `src/app.ts` — instancia o Fastify, registra as rotas e o tratamento global de erros
 - `src/server.ts` — sobe o servidor na porta definida em `PORT`
+
+### Factories de use cases
+
+Os controllers não instanciam repositórios diretamente. A composição fica centralizada em `use-cases/factory/`:
+
+| Factory | Use case |
+|---------|----------|
+| `makeCreateUserUseCase()` | `CreateUserUseCase` |
+| `makeCreatePersonUseCase()` | `CreatePersonUseCase` |
+| `makeFindWithPersonUseCase()` | `FindWithPersonUseCase` |
+
+### Tratamento de erros
+
+O `app.setErrorHandler` em `src/app.ts` centraliza as respostas HTTP:
+
+| Erro | Status | Resposta |
+|------|--------|----------|
+| `ZodError` (validação de body/params) | `400` | `{ message: "Validation error", errors: ... }` |
+| `ResourceNotFoundError` | `404` | `{ message: "Resource not found" }` |
+| Demais erros | `500` | `{ message: "Internal server error" }` |
+
+O use case `FindWithPersonUseCase` lança `ResourceNotFoundError` quando o usuário não existe, em vez de retornar `undefined` para o controller tratar manualmente.
 
 ## Endpoints da API
 
 | Método | Rota | Descrição | Body / Params |
 |--------|------|-----------|---------------|
 | `POST` | `/user` | Cria usuário | `{ "username": "string", "password": "string" }` |
-| `GET` | `/user/:id` | Busca usuário com dados de person (JOIN) | `id` na URL |
+| `GET` | `/user/:id` | Busca usuário com dados de person (JOIN) | `id` na URL — retorna `404` se não encontrado |
 | `POST` | `/person` | Cria pessoa vinculada a um usuário | `{ "cpf": "string", "name": "string", "birth": "YYYY-MM-DD", "email": "string", "user_id": number }` |
 
 ### Exemplo — criar usuário
@@ -174,6 +197,8 @@ pettech/
 │   ├── lib/
 │   ├── repositories/
 │   └── use-cases/
+│       ├── errors/
+│       └── factory/
 ├── docker-compose.yml
 ├── .env.example
 └── package.json
