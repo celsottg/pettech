@@ -1,7 +1,6 @@
 import fastify from "fastify";
 import { z } from "zod";
-import { PersonRepository } from "../../../repositories/person.repository.js";
-import { CreatePersonUseCase } from "../../../use-cases/create-person.js";
+import { makeCreatePersonUseCase } from "../../../use-cases/factory/make-create-person-use-case.js";
 
 export async function create(request:fastify.FastifyRequest, reply:fastify.FastifyReply) {
     const registerBodySchema = z.object({
@@ -15,8 +14,7 @@ export async function create(request:fastify.FastifyRequest, reply:fastify.Fasti
     const { cpf, name, email, birth, user_id } = registerBodySchema.parse(request.body);
 
     try {
-        const personRepository = new PersonRepository();
-        const createPersonUseCase = new CreatePersonUseCase(personRepository);
+        const createPersonUseCase = makeCreatePersonUseCase();
         
         await createPersonUseCase.handler({ cpf, name, email, birth, user_id });
 

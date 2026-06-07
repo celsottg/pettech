@@ -1,7 +1,6 @@
 import fastify from "fastify";
 import { z } from "zod";
-import { UserRepository } from "../../../repositories/user.repository.js";
-import { CreateUserUseCase } from "../../../use-cases/create-user.js";
+import { makeCreateUserUseCase } from "../../../use-cases/factory/make-create-user-use-case.js";
 
 export async function create(request: fastify.FastifyRequest, reply: fastify.FastifyReply) {
     const registerBodySchema = z.object({
@@ -12,8 +11,7 @@ export async function create(request: fastify.FastifyRequest, reply: fastify.Fas
     const { username, password } = registerBodySchema.parse(request.body);
 
     try {
-        const userRepository = new UserRepository();
-        const createUserUseCase = new CreateUserUseCase(userRepository);
+        const createUserUseCase = makeCreateUserUseCase();
         const user = await createUserUseCase.handler({ username, password });
         if (!user) {
             return reply.status(400).send({ message: 'User already exists' });
