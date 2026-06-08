@@ -1,8 +1,10 @@
-import { User } from "../entities/user.entity.js";
-import { database } from "../lib/pg/db.js";
-import { Person } from "../entities/person.entity.js";
+import { User } from "../../entities/user.entity.js";
+import { Person } from "../../entities/person.entity.js";
+import type { IUserRepository } from "../../repositories/user.repository.interface.ts";
 
-export class UserRepository {
+import { database } from "../../lib/pg/db.js";
+
+export class UserRepository implements IUserRepository {
     public async create({username, password}: User): Promise<User | undefined> {
         const result = await database.clientInstance?.query<User>(`
             INSERT INTO "user" (username, password)

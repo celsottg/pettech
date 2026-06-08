@@ -19,14 +19,16 @@ flowchart TB
   client[Cliente_HTTP]
   controllers[http/controllers]
   useCases[use-cases]
-  repositories[repositories]
+  interfaces[repository_interfaces]
+  pgImpl[repositories/pg]
   lib[lib/pg]
   db[(PostgreSQL_Docker)]
 
   client --> controllers
   controllers --> useCases
-  useCases --> repositories
-  repositories --> lib
+  useCases --> interfaces
+  pgImpl -.->|implements| interfaces
+  pgImpl --> lib
   lib --> db
 ```
 
@@ -34,12 +36,13 @@ flowchart TB
 
 | Pasta | Responsabilidade |
 |-------|------------------|
-| `entities/` | Modelos de domínio (`User`, `Person`) |
+| `entities/` | Modelos de domínio (`User`, `Person`, `Address`) |
 | `env/` | Validação de variáveis de ambiente com Zod |
 | `http/controllers/` | Rotas e handlers HTTP (entrada da API) |
 | `lib/` | Infraestrutura (conexão PostgreSQL em `lib/pg/db.ts`) |
 | `utils/` | Utilitários compartilhados (ex.: tratamento global de erros) |
-| `repositories/` | Acesso a dados (queries SQL) |
+| `repositories/` | Contratos de acesso a dados (`*.repository.interface.ts`) |
+| `repositories/pg/` | Implementações PostgreSQL dos repositórios |
 | `use-cases/` | Regras de aplicação e orquestração |
 | `use-cases/factory/` | Factories que instanciam use cases com suas dependências |
 | `use-cases/errors/` | Erros de domínio reutilizados na aplicação |
@@ -49,6 +52,18 @@ flowchart TB
 - `src/app.ts` — instancia o Fastify, registra as rotas e conecta o `globalErrorHandler`
 - `src/server.ts` — sobe o servidor na porta definida em `PORT`
 - `src/utils/global-error-handler.ts` — mapeia erros de domínio e validação para respostas HTTP
+
+### Repositórios e inversão de dependência
+
+Os use cases dependem de **interfaces**, não das implementações concretas. As factories instanciam as classes em `repositories/pg/` e as injetam via contrato:
+
+| Interface | Implementação PG | Métodos |
+|-----------|------------------|---------|
+| `IPersonRepository` | `PersonRepository` | `create` |
+| `IUserRepository` | `UserRepository` | `create`, `findWithPerson` |
+| `IAddressRepository` | `AddressRepository` | `create`, `findAddressesByPersonId` |
+
+A entidade `Address` e o `AddressRepository` já estão modelados para endereços vinculados a pessoas (com paginação na listagem).
 
 ### Factories de use cases
 
@@ -198,6 +213,8 @@ pettech/
 │   ├── http/controllers/
 │   ├── lib/
 │   ├── repositories/
+│   │   ├── *.repository.interface.ts
+│   │   └── pg/
 │   ├── utils/
 │   └── use-cases/
 │       ├── errors/
