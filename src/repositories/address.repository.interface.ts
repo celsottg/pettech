@@ -1,7 +1,7 @@
-import { Address } from "../entities/address.entity.js";
-import { Person } from "../entities/person.entity.js";
+import type { IPerson } from "../entities/models/person.interface.js";
+import type { IAddress } from "../entities/models/address.interface.js";
 
 export interface IAddressRepository {
-    findAddressesByPersonId(person_id: number, page: number, limit: number): Promise<Address[] & Person[]>;
-    create(address: Address & Person): Promise<Address | undefined>;
+    findAddressesByPersonId(person_id: number, page: number, limit: number): Promise<IAddress[] & IPerson[]>;
+    create(address: IAddress): Promise<IAddress | undefined>;
 }

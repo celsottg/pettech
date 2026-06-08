@@ -36,7 +36,8 @@ flowchart TB
 
 | Pasta | Responsabilidade |
 |-------|------------------|
-| `entities/` | Modelos de domínio (`User`, `Person`, `Address`) |
+| `entities/` | Classes de domínio (`User`, `Person`, `Address`) |
+| `entities/models/` | Contratos TypeScript das entidades (`IUser`, `IPerson`, `IAddress`) |
 | `env/` | Validação de variáveis de ambiente com Zod |
 | `http/controllers/` | Rotas e handlers HTTP (entrada da API) |
 | `lib/` | Infraestrutura (conexão PostgreSQL em `lib/pg/db.ts`) |
@@ -53,9 +54,21 @@ flowchart TB
 - `src/server.ts` — sobe o servidor na porta definida em `PORT`
 - `src/utils/global-error-handler.ts` — mapeia erros de domínio e validação para respostas HTTP
 
+### Modelos de domínio
+
+As classes em `entities/` implementam contratos em `entities/models/`, desacoplando repositórios e use cases das implementações concretas:
+
+| Interface | Classe | Campos principais |
+|-----------|--------|-------------------|
+| `IUser` | `User` | `username`, `password` |
+| `IPerson` | `Person` | `cpf`, `name`, `birth`, `email`, `user_id` |
+| `IAddress` | `Address` | `street`, `number`, `complement`, `neighborhood`, `city`, `state`, `zip_code`, `person_id` |
+
+As implementações PostgreSQL em `repositories/pg/` tipam parâmetros e retornos com essas interfaces.
+
 ### Repositórios e inversão de dependência
 
-Os use cases dependem de **interfaces**, não das implementações concretas. As factories instanciam as classes em `repositories/pg/` e as injetam via contrato:
+Os use cases dependem de **interfaces de repositório**, não das implementações concretas. As factories instanciam as classes em `repositories/pg/` e as injetam via contrato:
 
 | Interface | Implementação PG | Métodos |
 |-----------|------------------|---------|
@@ -63,7 +76,14 @@ Os use cases dependem de **interfaces**, não das implementações concretas. As
 | `IUserRepository` | `UserRepository` | `create`, `findWithPerson` |
 | `IAddressRepository` | `AddressRepository` | `create`, `findAddressesByPersonId` |
 
-A entidade `Address` e o `AddressRepository` já estão modelados para endereços vinculados a pessoas (com paginação na listagem).
+### Use cases de endereço
+
+| Use case | Descrição |
+|----------|-----------|
+| `CreateAddressUseCase` | Cria endereço vinculado a uma pessoa (`person_id`) |
+| `FindAddressByPersonUseCase` | Lista endereços de uma pessoa com paginação (`page`, `limit`) |
+
+> Endpoints HTTP para endereços ainda não expostos — use cases e repositório já preparados.
 
 ### Factories de use cases
 
@@ -209,6 +229,7 @@ pettech/
 │   └── postgres/       # script init multi-database
 ├── src/
 │   ├── entities/
+│   │   └── models/
 │   ├── env/
 │   ├── http/controllers/
 │   ├── lib/
