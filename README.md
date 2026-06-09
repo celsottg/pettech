@@ -254,3 +254,7 @@ Coleção de requisições disponível em `.postman/Pettech.postman_collection.j
 - `.env` — credenciais e configurações locais
 - `build/` — artefatos de compilação
 - `node_modules/` — dependências instaladas
+
+## Considerações
+
+Código desenvolvido por Celso Gonçalves e com o apoio do Cursor Agent para a criação do README e commits.
