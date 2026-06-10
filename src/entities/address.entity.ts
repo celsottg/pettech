@@ -1,7 +1,7 @@
 import type { IAddress } from "./models/address.interface.ts";
 
 export class Address implements IAddress {
-    constructor(street: string, number: string, complement: string, neighborhood: string, city: string, state: string, zip_code: string) {
+    constructor(street: string, number: number, complement: string, neighborhood: string, city: string, state: string, zip_code: string) {
         this.street = street;
         this.number = number;
         this.complement = complement;
@@ -13,7 +13,7 @@ export class Address implements IAddress {
     id?: number;
     person_id?: number;
     street: string;
-    number: string;
+    number: number;
     complement: string;
     neighborhood: string;
     city: string;

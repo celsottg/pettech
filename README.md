@@ -1,6 +1,6 @@
 # Pettech
 
-API REST em Node.js e TypeScript para gestão de usuários e pessoas, com PostgreSQL executado via Docker Compose.
+API REST em Node.js e TypeScript para gestão de usuários, pessoas e endereços, com PostgreSQL executado via Docker Compose.
 
 ## Visão geral
 
@@ -62,7 +62,7 @@ As classes em `entities/` implementam contratos em `entities/models/`, desacopla
 |-----------|--------|-------------------|
 | `IUser` | `User` | `username`, `password` |
 | `IPerson` | `Person` | `cpf`, `name`, `birth`, `email`, `user_id` |
-| `IAddress` | `Address` | `street`, `number`, `complement`, `neighborhood`, `city`, `state`, `zip_code`, `person_id` |
+| `IAddress` | `Address` | `street`, `number` (integer), `complement`, `neighborhood`, `city`, `state`, `zip_code`, `person_id` |
 
 As implementações PostgreSQL em `repositories/pg/` tipam parâmetros e retornos com essas interfaces.
 
@@ -83,7 +83,7 @@ Os use cases dependem de **interfaces de repositório**, não das implementaçõ
 | `CreateAddressUseCase` | Cria endereço vinculado a uma pessoa (`person_id`) |
 | `FindAddressByPersonUseCase` | Lista endereços de uma pessoa com paginação (`page`, `limit`) |
 
-> Endpoints HTTP para endereços ainda não expostos — use cases e repositório já preparados.
+Controllers em `http/controllers/address/` expõem os endpoints abaixo.
 
 ### Factories de use cases
 
@@ -94,6 +94,8 @@ Os controllers não instanciam repositórios diretamente. A composição fica ce
 | `makeCreateUserUseCase()` | `CreateUserUseCase` |
 | `makeCreatePersonUseCase()` | `CreatePersonUseCase` |
 | `makeFindWithPersonUseCase()` | `FindWithPersonUseCase` |
+| `makeCreateAddressUseCase()` | `CreateAddressUseCase` |
+| `makeFindAddressByPersonUseCase()` | `FindAddressByPersonUseCase` |
 
 ### Tratamento de erros
 
@@ -114,6 +116,8 @@ O use case `FindWithPersonUseCase` lança `ResourceNotFoundError` quando o usuá
 | `POST` | `/user` | Cria usuário | `{ "username": "string", "password": "string" }` |
 | `GET` | `/user/:id` | Busca usuário com dados de person (JOIN) | `id` na URL — retorna `404` se não encontrado |
 | `POST` | `/person` | Cria pessoa vinculada a um usuário | `{ "cpf": "string", "name": "string", "birth": "YYYY-MM-DD", "email": "string", "user_id": number }` |
+| `POST` | `/address` | Cria endereço vinculado a uma pessoa | `{ "street": "string", "number": number, "complement": "string", "neighborhood": "string", "city": "string", "state": "string", "zip_code": "string", "person_id": number }` |
+| `GET` | `/address/person/:person_id` | Lista endereços de uma pessoa (paginado) | `person_id` na URL; query `page` e `limit` (padrão: 1 e 10) |
 
 ### Exemplo — criar usuário
 
@@ -138,6 +142,29 @@ curl -X POST http://localhost:3000/person \
 ```
 
 > **Observação:** o campo `cpf` no banco aceita até 11 caracteres (`varchar(11)`). Envie o CPF sem máscara (apenas dígitos).
+
+### Exemplo — criar endereço
+
+```bash
+curl -X POST http://localhost:3000/address \
+  -H "Content-Type: application/json" \
+  -d '{
+    "street": "Rua das Flores",
+    "number": 123,
+    "complement": "Apto 45",
+    "neighborhood": "Centro",
+    "city": "São Paulo",
+    "state": "SP",
+    "zip_code": "01001000",
+    "person_id": 1
+  }'
+```
+
+### Exemplo — listar endereços por pessoa
+
+```bash
+curl "http://localhost:3000/address/person/1?page=1&limit=10"
+```
 
 ## Pré-requisitos
 
@@ -167,6 +194,16 @@ docker compose up -d
 ```
 
 O `docker-compose.yml` sobe um container PostgreSQL (`pettech-postgres`) na porta `5432`, com volume persistente e script de inicialização em `docker/postgres/`.
+
+**Migração da tabela `address` (bancos já existentes):**
+
+Se o container já foi criado antes das colunas `number`, `complement` e `neighborhood`, execute manualmente:
+
+```bash
+docker exec -i pettech-postgres psql -U root -d pettech < docker/postgres/002-add-address-columns.sql
+```
+
+O script `docker/postgres/002-add-address-columns.sql` adiciona as colunas ausentes na tabela `address`.
 
 ### 3. Instalar dependências
 
@@ -226,12 +263,15 @@ O comando `build` compila o código TypeScript para a pasta `build/` (ignorada p
 pettech/
 ├── build/              # saída do tsup (gitignored)
 ├── docker/
-│   └── postgres/       # script init multi-database
+│   └── postgres/       # scripts de init e migrações SQL
 ├── src/
 │   ├── entities/
 │   │   └── models/
 │   ├── env/
 │   ├── http/controllers/
+│   │   ├── address/
+│   │   ├── person/
+│   │   └── user/
 │   ├── lib/
 │   ├── repositories/
 │   │   ├── *.repository.interface.ts
