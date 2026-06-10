@@ -1,12 +1,13 @@
 # Pettech
 
-API REST em Node.js e TypeScript para gestão de usuários, pessoas e endereços, com PostgreSQL executado via Docker Compose.
+API REST em Node.js e TypeScript para gestão de usuários, pessoas, endereços e catálogo de produtos, com PostgreSQL executado via Docker Compose.
 
 ## Visão geral
 
 - **Runtime:** Node.js (ESM)
 - **Servidor HTTP:** Fastify
-- **Banco de dados:** PostgreSQL (`pg`)
+- **Banco de dados:** PostgreSQL (`pg` + TypeORM)
+- **ORM:** TypeORM com decorators para novas entidades (`Product`, `Category`)
 - **Validação:** Zod (body, params e variáveis de ambiente)
 - **Build:** tsup (saída em `build/`)
 
@@ -21,26 +22,29 @@ flowchart TB
   useCases[use-cases]
   interfaces[repository_interfaces]
   pgImpl[repositories/pg]
-  lib[lib/pg]
+  libPg[lib/pg]
+  typeorm[lib/typeorm]
   db[(PostgreSQL_Docker)]
 
   client --> controllers
   controllers --> useCases
   useCases --> interfaces
   pgImpl -.->|implements| interfaces
-  pgImpl --> lib
-  lib --> db
+  pgImpl --> libPg
+  typeorm --> db
+  libPg --> db
 ```
 
 ### Estrutura em `src/`
 
 | Pasta | Responsabilidade |
 |-------|------------------|
-| `entities/` | Classes de domínio (`User`, `Person`, `Address`) |
-| `entities/models/` | Contratos TypeScript das entidades (`IUser`, `IPerson`, `IAddress`) |
+| `entities/` | Classes de domínio (`User`, `Person`, `Address`, `Product`, `Category`) |
+| `entities/models/` | Contratos TypeScript das entidades (`IUser`, `IPerson`, `IAddress`, `IProduct`, `ICategory`) |
 | `env/` | Validação de variáveis de ambiente com Zod |
 | `http/controllers/` | Rotas e handlers HTTP (entrada da API) |
-| `lib/` | Infraestrutura (conexão PostgreSQL em `lib/pg/db.ts`) |
+| `lib/pg/` | Conexão PostgreSQL via driver `pg` (repositórios legados) |
+| `lib/typeorm/` | DataSource TypeORM (`appDataSource`) com `synchronize: true` |
 | `utils/` | Utilitários compartilhados (ex.: tratamento global de erros) |
 | `repositories/` | Contratos de acesso a dados (`*.repository.interface.ts`) |
 | `repositories/pg/` | Implementações PostgreSQL dos repositórios |
@@ -50,7 +54,7 @@ flowchart TB
 
 ### Bootstrap
 
-- `src/app.ts` — instancia o Fastify, registra as rotas e conecta o `globalErrorHandler`
+- `src/app.ts` — carrega `reflect-metadata`, inicializa o TypeORM, registra as rotas e conecta o `globalErrorHandler`
 - `src/server.ts` — sobe o servidor na porta definida em `PORT`
 - `src/utils/global-error-handler.ts` — mapeia erros de domínio e validação para respostas HTTP
 
@@ -63,8 +67,21 @@ As classes em `entities/` implementam contratos em `entities/models/`, desacopla
 | `IUser` | `User` | `username`, `password` |
 | `IPerson` | `Person` | `cpf`, `name`, `birth`, `email`, `user_id` |
 | `IAddress` | `Address` | `street`, `number` (integer), `complement`, `neighborhood`, `city`, `state`, `zip_code`, `person_id` |
+| `IProduct` | `Product` (TypeORM) | `name`, `description`, `image_url`, `price` — `id` UUID |
+| `ICategory` | `Category` (TypeORM) | `name`, `created_at` |
 
-As implementações PostgreSQL em `repositories/pg/` tipam parâmetros e retornos com essas interfaces.
+As implementações PostgreSQL em `repositories/pg/` tipam parâmetros e retornos com as interfaces de `User`, `Person` e `Address`. `Product` e `Category` usam decorators TypeORM (`@Entity`, `@Column`) e são sincronizadas automaticamente pelo `appDataSource`.
+
+### TypeORM
+
+Configuração em `src/lib/typeorm/typeorm.ts`:
+
+- Conexão PostgreSQL reutilizando variáveis de ambiente (`POSTGRES_*`)
+- Entidades registradas: `Product`, `Category`
+- `synchronize: true` — cria/atualiza tabelas automaticamente em desenvolvimento
+- `logging` habilitado quando `NODE_ENV === 'development'`
+
+> **Atenção:** `synchronize: true` é adequado para desenvolvimento. Em produção, prefira migrations explícitas.
 
 ### Repositórios e inversão de dependência
 
@@ -244,6 +261,8 @@ O comando `build` compila o código TypeScript para a pasta `build/` (ignorada p
 |--------|-----|
 | `fastify` | Servidor HTTP |
 | `pg` | Driver PostgreSQL |
+| `typeorm` | ORM para entidades `Product` e `Category` |
+| `reflect-metadata` | Suporte a decorators TypeORM (requerido no bootstrap) |
 | `zod` | Validação de schemas e variáveis de ambiente |
 | `dotenv` | Carregamento do arquivo `.env` |
 
@@ -273,6 +292,8 @@ pettech/
 │   │   ├── person/
 │   │   └── user/
 │   ├── lib/
+│   │   ├── pg/
+│   │   └── typeorm/
 │   ├── repositories/
 │   │   ├── *.repository.interface.ts
 │   │   └── pg/
