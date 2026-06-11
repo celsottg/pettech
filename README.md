@@ -47,7 +47,8 @@ flowchart TB
 | `lib/typeorm/` | DataSource TypeORM (`appDataSource`) com `synchronize: true` |
 | `utils/` | Utilitários compartilhados (ex.: tratamento global de erros) |
 | `repositories/` | Contratos de acesso a dados (`*.repository.interface.ts`) |
-| `repositories/pg/` | Implementações PostgreSQL dos repositórios |
+| `repositories/pg/` | Implementações PostgreSQL dos repositórios (driver `pg`) |
+| `repositories/typeorm/` | Implementações TypeORM (`ProductRepository`) |
 | `use-cases/` | Regras de aplicação e orquestração |
 | `use-cases/factory/` | Factories que instanciam use cases com suas dependências |
 | `use-cases/errors/` | Erros de domínio reutilizados na aplicação |
@@ -67,10 +68,12 @@ As classes em `entities/` implementam contratos em `entities/models/`, desacopla
 | `IUser` | `User` | `username`, `password` |
 | `IPerson` | `Person` | `cpf`, `name`, `birth`, `email`, `user_id` |
 | `IAddress` | `Address` | `street`, `number` (integer), `complement`, `neighborhood`, `city`, `state`, `zip_code`, `person_id` |
-| `IProduct` | `Product` (TypeORM) | `name`, `description`, `image_url`, `price` — `id` UUID |
+| `IProduct` | `Product` (TypeORM) | `name`, `description`, `image_url`, `price`, `categories[]` — `id` UUID |
 | `ICategory` | `Category` (TypeORM) | `name`, `created_at` |
 
-As implementações PostgreSQL em `repositories/pg/` tipam parâmetros e retornos com as interfaces de `User`, `Person` e `Address`. `Product` e `Category` usam decorators TypeORM (`@Entity`, `@Column`) e são sincronizadas automaticamente pelo `appDataSource`.
+`Product` e `Category` possuem relação **ManyToMany** via tabela `product_category`. Ao criar um produto, categorias podem ser enviadas no body e são persistidas com `cascade: true`.
+
+As implementações PostgreSQL em `repositories/pg/` tipam parâmetros e retornos com as interfaces de `User`, `Person` e `Address`. `Product` usa TypeORM em `repositories/typeorm/` e é sincronizado automaticamente pelo `appDataSource`.
 
 ### TypeORM
 
@@ -78,6 +81,7 @@ Configuração em `src/lib/typeorm/typeorm.ts`:
 
 - Conexão PostgreSQL reutilizando variáveis de ambiente (`POSTGRES_*`)
 - Entidades registradas: `Product`, `Category`
+- Migration `ProductAutoGenerateUUID` — define `uuid_generate_v4()` como default do `product.id`
 - `synchronize: true` — cria/atualiza tabelas automaticamente em desenvolvimento
 - `logging` habilitado quando `NODE_ENV === 'development'`
 
@@ -92,6 +96,15 @@ Os use cases dependem de **interfaces de repositório**, não das implementaçõ
 | `IPersonRepository` | `PersonRepository` | `create` |
 | `IUserRepository` | `UserRepository` | `create`, `findWithPerson` |
 | `IAddressRepository` | `AddressRepository` | `create`, `findAddressesByPersonId` |
+| `IProductRepository` | `ProductRepository` (TypeORM) | `create` |
+
+### Use cases de produto
+
+| Use case | Descrição |
+|----------|-----------|
+| `CreateProductUseCase` | Cria produto com categorias opcionais via TypeORM |
+
+Controllers em `http/controllers/product/` expõem o endpoint abaixo.
 
 ### Use cases de endereço
 
@@ -113,6 +126,7 @@ Os controllers não instanciam repositórios diretamente. A composição fica ce
 | `makeFindWithPersonUseCase()` | `FindWithPersonUseCase` |
 | `makeCreateAddressUseCase()` | `CreateAddressUseCase` |
 | `makeFindAddressByPersonUseCase()` | `FindAddressByPersonUseCase` |
+| `makeCreateProductUseCase()` | `CreateProductUseCase` |
 
 ### Tratamento de erros
 
@@ -135,6 +149,7 @@ O use case `FindWithPersonUseCase` lança `ResourceNotFoundError` quando o usuá
 | `POST` | `/person` | Cria pessoa vinculada a um usuário | `{ "cpf": "string", "name": "string", "birth": "YYYY-MM-DD", "email": "string", "user_id": number }` |
 | `POST` | `/address` | Cria endereço vinculado a uma pessoa | `{ "street": "string", "number": number, "complement": "string", "neighborhood": "string", "city": "string", "state": "string", "zip_code": "string", "person_id": number }` |
 | `GET` | `/address/person/:person_id` | Lista endereços de uma pessoa (paginado) | `person_id` na URL; query `page` e `limit` (padrão: 1 e 10) |
+| `POST` | `/product` | Cria produto com categorias opcionais | `{ "name": "string", "description": "string", "image_url": "string", "price": number, "categories": [{ "name": "string", "id"?: number }] }` |
 
 ### Exemplo — criar usuário
 
@@ -181,6 +196,23 @@ curl -X POST http://localhost:3000/address \
 
 ```bash
 curl "http://localhost:3000/address/person/1?page=1&limit=10"
+```
+
+### Exemplo — criar produto
+
+```bash
+curl -X POST http://localhost:3000/product \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Ração Premium",
+    "description": "Ração para cães adultos 15kg",
+    "image_url": "https://example.com/racao.png",
+    "price": 89.90,
+    "categories": [
+      { "name": "Alimentação" },
+      { "name": "Cães" }
+    ]
+  }'
 ```
 
 ## Pré-requisitos
@@ -290,13 +322,16 @@ pettech/
 │   ├── http/controllers/
 │   │   ├── address/
 │   │   ├── person/
+│   │   ├── product/
 │   │   └── user/
 │   ├── lib/
 │   │   ├── pg/
 │   │   └── typeorm/
+│   │       └── migrations/
 │   ├── repositories/
 │   │   ├── *.repository.interface.ts
-│   │   └── pg/
+│   │   ├── pg/
+│   │   └── typeorm/
 │   ├── utils/
 │   └── use-cases/
 │       ├── errors/

@@ -2,6 +2,7 @@ import { DataSource } from "typeorm";
 import { env } from "../../env/index.js"
 import { Product } from "../../entities/product.entity.js";
 import { Category } from "../../entities/category.entity.js";
+import { ProductAutoGenerateUUID1781220902242 } from "./migrations/1781220902242-ProductAutoGenerateUUID.js";
 
 export const appDataSource = new DataSource({
     type: "postgres",
@@ -11,6 +12,7 @@ export const appDataSource = new DataSource({
     password: env.POSTGRES_PASSWORD,
     database: env.POSTGRES_DB,
     entities: [Product, Category],
+    migrations: [ProductAutoGenerateUUID1781220902242],
     logging: env.NODE_ENV === "development",
     synchronize: true,
 });

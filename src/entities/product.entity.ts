@@ -1,5 +1,7 @@
+import { Category } from "./category.entity.js";
+import type { ICategory } from "./models/category.interface.js";
 import type { IProduct } from "./models/product.interface.js";
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from "typeorm";
 
 @Entity({
     name: "product",
@@ -41,4 +43,20 @@ export class Product implements IProduct {
         nullable: false,
     })
     price: number;
+
+    @ManyToMany(() => Category, {
+        cascade: true,
+    })
+    @JoinTable({
+        name: "product_category",
+        joinColumn: {
+            name: "product_id",
+            referencedColumnName: "id",
+        },
+        inverseJoinColumn: {
+            name: "category_id",
+            referencedColumnName: "id",
+        },
+    })
+    categories?: ICategory[];
 }

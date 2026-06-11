@@ -1,5 +1,8 @@
 import type { ICategory } from "./models/category.interface.js";
 import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+@Entity({
+    name: "category",
+})
 
 export class Category implements ICategory {
     @PrimaryGeneratedColumn("increment", {
