@@ -48,7 +48,7 @@ flowchart TB
 | `utils/` | Utilitários compartilhados (ex.: tratamento global de erros) |
 | `repositories/` | Contratos de acesso a dados (`*.repository.interface.ts`) |
 | `repositories/pg/` | Implementações PostgreSQL dos repositórios (driver `pg`) |
-| `repositories/typeorm/` | Implementações TypeORM (`ProductRepository`) |
+| `repositories/typeorm/` | Implementações TypeORM (`ProductRepository`, `CategoryRepository`) |
 | `use-cases/` | Regras de aplicação e orquestração |
 | `use-cases/factory/` | Factories que instanciam use cases com suas dependências |
 | `use-cases/errors/` | Erros de domínio reutilizados na aplicação |
@@ -73,7 +73,7 @@ As classes em `entities/` implementam contratos em `entities/models/`, desacopla
 
 `Product` e `Category` possuem relação **ManyToMany** via tabela `product_category`. Ao criar um produto, categorias podem ser enviadas no body e são persistidas com `cascade: true`.
 
-As implementações PostgreSQL em `repositories/pg/` tipam parâmetros e retornos com as interfaces de `User`, `Person` e `Address`. `Product` usa TypeORM em `repositories/typeorm/` e é sincronizado automaticamente pelo `appDataSource`.
+As implementações PostgreSQL em `repositories/pg/` tipam parâmetros e retornos com as interfaces de `User`, `Person` e `Address`. `Product` e `Category` usam TypeORM em `repositories/typeorm/` e são sincronizados automaticamente pelo `appDataSource`.
 
 ### TypeORM
 
@@ -97,6 +97,15 @@ Os use cases dependem de **interfaces de repositório**, não das implementaçõ
 | `IUserRepository` | `UserRepository` | `create`, `findWithPerson` |
 | `IAddressRepository` | `AddressRepository` | `create`, `findAddressesByPersonId` |
 | `IProductRepository` | `ProductRepository` (TypeORM) | `create` |
+| `ICategoryRepository` | `CategoryRepository` (TypeORM) | `create` |
+
+### Use cases de categoria
+
+| Use case | Descrição |
+|----------|-----------|
+| `CreateCategoryUseCase` | Cria categoria via TypeORM |
+
+Controllers em `http/controllers/category/` expõem o endpoint abaixo.
 
 ### Use cases de produto
 
@@ -127,6 +136,7 @@ Os controllers não instanciam repositórios diretamente. A composição fica ce
 | `makeCreateAddressUseCase()` | `CreateAddressUseCase` |
 | `makeFindAddressByPersonUseCase()` | `FindAddressByPersonUseCase` |
 | `makeCreateProductUseCase()` | `CreateProductUseCase` |
+| `makeCreateCategoryUseCase()` | `CreateCategoryUseCase` |
 
 ### Tratamento de erros
 
@@ -150,6 +160,7 @@ O use case `FindWithPersonUseCase` lança `ResourceNotFoundError` quando o usuá
 | `POST` | `/address` | Cria endereço vinculado a uma pessoa | `{ "street": "string", "number": number, "complement": "string", "neighborhood": "string", "city": "string", "state": "string", "zip_code": "string", "person_id": number }` |
 | `GET` | `/address/person/:person_id` | Lista endereços de uma pessoa (paginado) | `person_id` na URL; query `page` e `limit` (padrão: 1 e 10) |
 | `POST` | `/product` | Cria produto com categorias opcionais | `{ "name": "string", "description": "string", "image_url": "string", "price": number, "categories": [{ "name": "string", "id"?: number }] }` |
+| `POST` | `/category` | Cria categoria | `{ "name": "string" }` |
 
 ### Exemplo — criar usuário
 
@@ -213,6 +224,14 @@ curl -X POST http://localhost:3000/product \
       { "name": "Cães" }
     ]
   }'
+```
+
+### Exemplo — criar categoria
+
+```bash
+curl -X POST http://localhost:3000/category \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "Alimentação" }'
 ```
 
 ## Pré-requisitos
@@ -321,6 +340,7 @@ pettech/
 │   ├── env/
 │   ├── http/controllers/
 │   │   ├── address/
+│   │   ├── category/
 │   │   ├── person/
 │   │   ├── product/
 │   │   └── user/
